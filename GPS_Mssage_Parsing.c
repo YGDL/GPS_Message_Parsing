@@ -19,26 +19,33 @@ uint8_t main(void)
 	// nmeaINFO info;
     // nmeaPARSER parser;
 
-	for(uint8_t Symbol_Count = 0U; ; Symbol_Count ++)
+	// nmea_zero_INFO(&info);			//信息存储结构
+	// nmea_parser_init(&parser);		//申请内存用于构建数据传输队列
+
+	for( ; ; )
 	{
-		Now_Pointer = (void *)memchr(Last_Pointer + 1, '$', 801);		//查找最近的一个$符号
-		GPS_Info_List[Symbol_Count][0] = Symbol_Count;
-		if((GPS_Data_Size <= (uint16_t)(Now_Pointer - (void *)GPS)) || NULL == Now_Pointer)		//防止越界
+		Last_Pointer = (void *)GPS;		//循环解析时候需要重置Last_Pointer
+		for(uint8_t Symbol_Count = 0U; ; Symbol_Count ++)
 		{
-			GPS_Info_List[Symbol_Count][1] = GPS_Data_Size - (uint16_t)(Last_Pointer - (void *)GPS);
-			GPS_Info_List[Symbol_Count+1][0] = Symbol_Count +1;
-			GPS_Info_List[Symbol_Count+1][1] = 0;
-			break;		//调成循环
+			Now_Pointer = (void *)memchr(Last_Pointer + 1, '$', 801);		//查找最近的一个$符号
+			GPS_Info_List[Symbol_Count][0] = Symbol_Count;
+			if((GPS_Data_Size <= (uint16_t)(Now_Pointer - (void *)GPS)) || NULL == Now_Pointer)		//防止越界
+			{
+				GPS_Info_List[Symbol_Count][1] = GPS_Data_Size - (uint16_t)(Last_Pointer - (void *)GPS);
+				GPS_Info_List[Symbol_Count+1][0] = Symbol_Count +1;
+				GPS_Info_List[Symbol_Count+1][1] = 0;
+				break;		//调成循环
+			}
+			GPS_Info_List[Symbol_Count][1] = (uint16_t)(Now_Pointer - Last_Pointer);	//计算最近的$符号偏移
+			Last_Pointer = Now_Pointer;			//重新开始
 		}
-		GPS_Info_List[Symbol_Count][1] = (uint16_t)(Now_Pointer - Last_Pointer);	//计算最近的$符号偏移
-		Last_Pointer = Now_Pointer;			//重新开始
+
+		// Last_Pointer = (void *)Cache;
+		// for(uint8_t Parse_Count = 0U; 0 != GPS_Info_List[Parse_Count][1]; Parse_Count ++)
+		// {
+		// 	nmea_parse(&parser, (const char *)(Last_Pointer += ((0 == Parse_Count) ? 0 : GPS_Info_List[Parse_Count-1][1])), GPS_Info_List[Parse_Count][1], &info);
+		// }
 	}
-
-	// for(uint8_t Parse_Count = 0U; 0 == GPS_Info_List[Parse_Count][1]; Parse_Count ++)
-	// {
-	// 	nmea_parse(&parser, GPS+((0 == Parse_Count) ? 0 : GPS_Info_List[Parse_Count-1][0]), GPS_Info_List[Parse_Count][1], &info);
-	// }
-	// nmea_parser_destroy(&parser);
-
+	// nmea_parser_destroy(&parser);		//在循环解析过程中不能释放parser，当退出程序后才释放该内存
 	return 0;
 }
